@@ -11,3 +11,4 @@ def compute_ndwi_s2(raster):
     nir = raster[7].astype(np.float32)
 
     ndwi = np.where(green + nir != 0 , (green - nir) / (green + nir),0.0)
+    return ndwi
