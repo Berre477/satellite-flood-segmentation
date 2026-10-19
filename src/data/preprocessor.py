@@ -22,8 +22,8 @@ def preprocess_and_tile(raw_d = "data/raw",out_d="data/processed",patch_size = 2
     os.makedirs(out_mask_d,exist_ok=True)
 
     
-    s1_files = glob.glob(os.path.join(raw_d,"s1","_S1Hand.tif"))
-    sorted_s1_files = sorted(s1_files)
+    s1_files = sorted(glob.glob(os.path.join(raw_d,"s1","_S1Hand.tif")))
+    print(f"Found {len(s1_files)} scene(s)")
 
     cout_patch_saved = 0
 
@@ -32,6 +32,7 @@ def preprocess_and_tile(raw_d = "data/raw",out_d="data/processed",patch_size = 2
         s2_path = os.path.join(raw_d,"s2",f"{base_name}_S2Hand.tif")
         mask_path = os.path.join(raw_d,"masks",f"{base_name}_LabelHand.tif")
 
+        if not os.path.exists(s2_path) or not os.path.exists(mask_path):print(f"Skip {base_name}: missing matching paire")
         #Opens al 3 files with rasterio
         with rasterio.open(s1_path) as src_s1, rasterio.open(s2_path) as src_s2,rasterio.open(mask_path) as src_mask:
             rows = src_mask.height
