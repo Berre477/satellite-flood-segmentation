@@ -1,92 +1,109 @@
+import os
 import glob
 import numpy as np
 import rasterio
-import os
 from rasterio.windows import Window
 
+# Resolve project paths relative to this file
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 
-#computes the NDWI fronm Sentinel 2(Normal difference water index )
+RAW_DIR = os.path.join(PROJECT_ROOT, "data", "raw")
+OUT_DIR = os.path.join(PROJECT_ROOT, "data", "processed")
+
 def compute_ndwi_s2(raster):
     green = raster[2].astype(np.float32)
     nir = raster[7].astype(np.float32)
+    denom = green + nir
+    return np.where(denom != 0, (green - nir) / denom, 0.0)
 
-    ndwi = np.where(green + nir != 0 , (green - nir) / (green + nir),0.0)
-    return ndwi
+def normalize_sar(band, bottom=-30.0, top=0.0):
+    clipped = np.clip(band, bottom, top)
+    return (clipped - bottom) / (top - bottom)
 
-def preprocess_and_tile(raw_d = "data/raw",out_d="data/processed",patch_size = 256,stride = 256):
-    
-    #creates the ouput folder if it does not exist yet
-    outIm_d = os.path.join(out_d,"images")
-    out_mask_d = os.path.join(out_d,"masks")
-    os.makedirs(outIm_d,exist_ok=True)
-    os.makedirs(out_mask_d,exist_ok=True)
+def preprocess_and_tile():
+    out_img_dir = os.path.join(OUT_DIR, "images")
+    out_mask_dir = os.path.join(OUT_DIR, "masks")
+    os.makedirs(out_img_dir, exist_ok=True)
+    os.makedirs(out_mask_dir, exist_ok=True)
 
-    
-    s1_files = sorted(glob.glob(os.path.join(raw_d,"s1","_S1Hand.tif")))
-    print(f"Found {len(s1_files)} scene(s)")
+    s1_files = sorted(glob.glob(os.path.join(RAW_DIR, "s1", "*_S1Hand.tif")))
+    print(f"Found {len(s1_files)} scene(s). Processing...")
 
-    cout_patch_saved = 0
+    saved_patches = 0
+    patch_size = 256
+    stride = 256
 
     for s1_path in s1_files:
-        base_name = os.path.basename(s1_path).replace("_S1Hand.tif")
-        s2_path = os.path.join(raw_d,"s2",f"{base_name}_S2Hand.tif")
-        mask_path = os.path.join(raw_d,"masks",f"{base_name}_LabelHand.tif")
+        base_name = os.path.basename(s1_path).replace("_S1Hand.tif", "")
+        s2_path = os.path.join(RAW_DIR, "s2", f"{base_name}_S2Hand.tif")
+        mask_path = os.path.join(RAW_DIR, "masks", f"{base_name}_LabelHand.tif")
 
-        if not os.path.exists(s2_path) or not os.path.exists(mask_path):print(f"Skip {base_name}: missing matching paire")
-        #Opens al 3 files with rasterio
-        with rasterio.open(s1_path) as src_s1, rasterio.open(s2_path) as src_s2,rasterio.open(mask_path) as src_mask:
-            rows = src_mask.height
-            cols = src_mask.width
+        if not os.path.exists(s2_path) or not os.path.exists(mask_path):
+            print(f"Skipping {base_name}: missing matching pair.")
+            continue
 
-            for r in range(0,rows - patch_size + 1,stride):
-                for c in range(0,cols - patch_size +1 ,stride):
-                    window = Window(col_off = c,row_off = r,width = patch_size,height = patch_size)
-                    mask_slice = src_mask.read(1,window = window)
-                    final_mask = np.where(mask_slice == 1,1,0).astype(np.uint8)
+        with rasterio.open(s1_path) as src_s1, \
+             rasterio.open(s2_path) as src_s2, \
+             rasterio.open(mask_path) as src_mask:
 
-                #read raw data
-                s1_win = src_s1.read(window=window).astype(np.float32)
-                s2_win = src_s2.read(window=window).astype(np.float32)
+            rows, cols = src_mask.height, src_mask.width
 
-                def normalize_sar(band,bottom=-30.0,top=0.0):
-                    clipped = np.clip(band,bottom,top)
-                    return (clipped - bottom) / (top - bottom)
+            for r in range(0, rows - patch_size + 1, stride):
+                for c in range(0, cols - patch_size + 1, stride):
+                    window = Window(col_off=c, row_off=r, width=patch_size, height=patch_size)
 
-                #Normalized channels to [0,1]
-                ch_vv = normalize_sar(s1_win[0])
-                ch_vh = normalize_sar(s1_win[1])
-                ch_s2_nir = np.clip(s2_win[7] / 1000.0,0.0,1.0)
+                    # 1. Read ground truth mask slice
+                    mask_slice = src_mask.read(1, window=window)
+                    final_mask = np.where(mask_slice == 1, 1, 0).astype(np.uint8)
 
-                #Water index shift from [0,1]
-                raw_ndwi = compute_ndwi_s2(s2_win)
-                ch_ndwi = np.clip((raw_ndwi + 1.0)/2.0 , 0.0 , 1.0)
+                    # 2. Read satellite sensor slices
+                    s1_win = src_s1.read(window=window).astype(np.float32)
+                    s2_win = src_s2.read(window=window).astype(np.float32)
 
-                #stack all the channels together
-                fused_patch = np.stack([ch_vv,ch_vh,ch_s2_nir,ch_ndwi],axis=0)
-                patch_transform = rasterio.windows.transform(window,src_s1.transform)
-                h_name = f"{base_name}_x{c}_y{r}.tif"
+                    # 3. Normalize channels to [0, 1]
+                    ch_vv = normalize_sar(s1_win[0])
+                    ch_vh = normalize_sar(s1_win[1])
+                    ch_s2_nir = np.clip(s2_win[7] / 10000.0, 0.0, 1.0)
+                    raw_ndwi = compute_ndwi_s2(s2_win)
+                    ch_ndwi = np.clip((raw_ndwi + 1.0) / 2.0, 0.0, 1.0)
 
-                img = src_s1.meta.copy()
-                img.update({"count":1,"height":patch_size,"width":patch_size,"dtype":"uint8","transform": patch_transform})
-                img_save = os.path.join(outIm_d,h_name)
-                with rasterio.open(img_save,"w",**img) as dst:
-                    dst.write(fused_patch)
+                    # 4. Stack into 4-channel image tensor: (4, 256, 256)
+                    fused_patch = np.stack([ch_vv, ch_vh, ch_s2_nir, ch_ndwi], axis=0).astype(np.float32)
+                    patch_transform = rasterio.windows.transform(window, src_s1.transform)
+                    patch_name = f"{base_name}_x{c}_y{r}.tif"
 
-                mask = src_mask.meta.copy()
-                mask.update({"count":1,"height":patch_size,"width":patch_size,"dtype":"uint8","transform":patch_transform})
-                mask_save = os.path.join(out_mask_d,h_name)
-                with rasterio.open(mask_path,"w",**mask) as dst:
-                    dst.write(final_mask,1)
+                    # 5. Save 4-channel image (float32, nodata removed)
+                    img_meta = src_s1.meta.copy()
+                    img_meta.update({
+                        "driver": "GTiff",
+                        "count": 4,
+                        "height": patch_size,
+                        "width": patch_size,
+                        "dtype": "float32",
+                        "transform": patch_transform,
+                        "nodata": None
+                    })
+                    with rasterio.open(os.path.join(out_img_dir, patch_name), "w", **img_meta) as dst:
+                        dst.write(fused_patch)
 
-                cout_patch_saved +=1
-    print("done")
+                    # 6. Save single-channel mask (uint8, nodata removed)
+                    mask_meta = src_mask.meta.copy()
+                    mask_meta.update({
+                        "driver": "GTiff",
+                        "count": 1,
+                        "height": patch_size,
+                        "width": patch_size,
+                        "dtype": "uint8",
+                        "transform": patch_transform,
+                        "nodata": None
+                    })
+                    with rasterio.open(os.path.join(out_mask_dir, patch_name), "w", **mask_meta) as dst:
+                        dst.write(final_mask, 1)
 
-if __name__ == "main":
+                    saved_patches += 1
+
+    print(f"Done! Successfully generated {saved_patches} patches in '{OUT_DIR}'.")
+
+if __name__ == "__main__":
     preprocess_and_tile()
-
-
-
-                
-
-            
-
