@@ -63,9 +63,25 @@ def preprocess_and_tile(raw_d = "data/raw",out_d="data/processed",patch_size = 2
                 #stack all the channels together
                 fused_patch = np.stack([ch_vv,ch_vh,ch_s2_nir,ch_ndwi],axis=0)
                 patch_transform = rasterio.windows.transform(window,src_s1.transform)
-                h_name = f"{base_name}_x{x}_y{y}.tif"
+                h_name = f"{base_name}_x{c}_y{r}.tif"
 
-                
+                img = src_s1.meta.copy()
+                img.update({"count":1,"height":patch_size,"width":patch_size,"dtype":"uint8","transform": patch_transform})
+                img_save = os.path.join(outIm_d,h_name)
+                with rasterio.open(img_save,"w",**img) as dst:
+                    dst.write(fused_patch)
+
+                mask = src_mask.meta.copy()
+                mask.update({"count":1,"height":patch_size,"width":patch_size,"dtype":"uint8","transform":patch_transform})
+                mask_save = os.path.join(out_mask_d,h_name)
+                with rasterio.open(mask_path,"w",**mask) as dst:
+                    dst.write(final_mask,1)
+
+                cout_patch_saved +=1
+    print("done")
+
+if __name__ == "main":
+    preprocess_and_tile()
 
 
 
