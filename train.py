@@ -30,6 +30,31 @@ class FloodDataset(Dataset):
 
 
 def train():
-    pass
+
+    #Loading dataset 
+    dataset = FloodDataset(data_d="data/processed")
+    loader = DataLoader(dataset,batch_size=2,shuffle=True)
+
+    #Compute
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+
+    #Model
+    model = smp.Unet(encoder_name="resnet34",encoder_weights=None,in_channels=4,classes=1).to(device)
+
+    #Loss
+    loss = smp.losses.DiceLoss(mode="binary")
+    optimizer = torch.optim.AdamW(model.parameters(),lr=1e-3)
+    epochs = 10
+
+    model.train()
+    for epoch in range(epoch):
+        epoch_loss = 0.0
+        for im ,mask in loader:
+            images = im.to(device)
+            masks = mask.to(device)
+            
 
     
