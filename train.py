@@ -66,7 +66,7 @@ def train():
             epoch_loss +=loss.item()
         avg_loss = epoch_loss /len(loader)
     os.makedirs("models",exist_ok=True)
-    torch.save(model.state_dict(),"model/flood_u.pth")
+    torch.save(model.state_dict(),"models/flood_u.pth")
     print("Model trained and saved")
 if __name__ == "__main__":
     train()
