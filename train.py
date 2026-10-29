@@ -52,6 +52,7 @@ def train():
     model.train()
     for epoch in range(epochs):
         epoch_loss = 0.0
+
         for im ,mask in loader:
             images = im.to(device)
             masks = mask.to(device)
@@ -62,7 +63,7 @@ def train():
             loss.backward()
             optimizer.step()
 
-            epochs_loss +=loss.items()
+            epoch_loss +=loss.item()
         avg_loss = epoch_loss /len(loader)
     os.makedirs("models",exist_ok=True)
     torch.save(model.state_dict(),"model/flood_u.pth")
