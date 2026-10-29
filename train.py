@@ -45,7 +45,7 @@ def train():
     model = smp.Unet(encoder_name="resnet34",encoder_weights=None,in_channels=4,classes=1).to(device)
 
     #Loss
-    loss = smp.losses.DiceLoss(mode="binary")
+    closs = smp.losses.DiceLoss(mode="binary")
     optimizer = torch.optim.AdamW(model.parameters(),lr=1e-3)
     epochs = 10
 
@@ -55,6 +55,11 @@ def train():
         for im ,mask in loader:
             images = im.to(device)
             masks = mask.to(device)
-            
+
+            out = model(images)
+            optimizer.zero_grad
+            loss = closs(out,masks)
+            loss.backward()
+            optimizer.step()
 
     
