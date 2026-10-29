@@ -15,9 +15,9 @@ class FloodDataset(Dataset):
 
     def __getitem__(self, index):
         im_path = self.im_paths[index]
-        mask_path = os.path.join(self.mask_d,os.path.basename(self.im_paths))
+        mask_path = os.path.join(self.mask_d,os.path.basename(im_path))
 
-        with rasterio.open(self.im_path) as src1 , rasterio.open(mask_path) as src2:
+        with rasterio.open(im_path) as src1 , rasterio.open(mask_path) as src2:
             image = src1.read().astype(np.float32)
             mask = src2.read(1).astype(np.float32)
         im_t = torch.from_numpy(image)
@@ -50,16 +50,22 @@ def train():
     epochs = 10
 
     model.train()
-    for epoch in range(epoch):
+    for epoch in range(epochs):
         epoch_loss = 0.0
         for im ,mask in loader:
             images = im.to(device)
             masks = mask.to(device)
 
             out = model(images)
-            optimizer.zero_grad
+            optimizer.zero_grad()
             loss = closs(out,masks)
             loss.backward()
             optimizer.step()
 
-    
+            epochs_loss +=loss.items()
+        avg_loss = epoch_loss /len(loader)
+    os.makedirs("models",exist_ok=True)
+    torch.save(model.state_dict(),"model/flood_u.pth")
+    print("Model trained and saved")
+if __name__ == "__main__":
+    train()
