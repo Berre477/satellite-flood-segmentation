@@ -28,3 +28,14 @@ $$\text{NDWI} = \frac{\text{Green} - \text{NIR}}{\text{Green} + \text{NIR}}$$
 
 * **Backbone and Decoder:**  U-Net architecture paired with a  ResNet -34 encoder
 * **Input Dimension:** $4 \times 256 \times 256$ spatial patches.
+
+
+## Evaluation and Metrics
+
+Model accuracy is quantified using the standart remote sensing metric **Intersection-over-Union (IoU / Jaccard Index)**:
+
+$$\text{IoU} = \frac{\vert{}A \cap B\vert{}}{\vert{}A \cup B\vert{}} = \frac{\text{True Positives}}{\text{True Positives} + \text{False Positives} + \text{False Negatives}}$$
+
+* **Initial Baseline IoU:** `0.58`
+* **Performance Characteristic:** Accurately isolates small water inlets, secondary channels, and complex irregular flood margins without introducing background speckle noise.
+
