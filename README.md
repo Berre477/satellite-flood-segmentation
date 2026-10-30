@@ -21,7 +21,7 @@ During major storm events, conventional optical satellites are obscured by cloud
     - Very Smooth ,standing water acts as a reflector
 2.  **Sentinel -2 MSI :** 
     - Near infrared (NIR) light is absorbed by open water wich reflects and appears as dark pixels
-    - Computes the ** Normalized difference water index (NDWI) ** to enhance water contrast :
+    - Computes the **Normalized difference water index (NDWI)** to enhance water contrast :
 $$\text{NDWI} = \frac{\text{Green} - \text{NIR}}{\text{Green} + \text{NIR}}$$
 
 ## Model Architecture and Training Strategy
