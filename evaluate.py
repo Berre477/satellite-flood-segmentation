@@ -31,8 +31,14 @@ def evaluation():
 
     with torch.no_grad():
         logits = model(tensor_input)
-        proba = torch.sigmoid(logits).cpu().numpy()
+        proba = torch.sigmoid(logits).squeeze().cpu().numpy()
         predicted_mask = (proba >0.5).astype(np.uint8)
+
+
+    #Calulate IOU score
+    inter = np.logical_and(ground_truth,predicted_mask).sum()
+    union = np.logical_or(ground_truth,predicted_mask).sum()
+    iou_score =  inter / union
 
     os.makedirs("reports/figures", exist_ok=True)
     fig, axes = plt.subplots(1, 4, figsize=(16, 4))
@@ -52,4 +58,15 @@ def evaluation():
     axes[2].set_title("Ground Truth Water")
     axes[2].axis("off")
 
+    #Moldel prediction 
+    axes[3].imshow(predicted_mask,cmap="Blues")
+    axes[3].set_title(f"Prediction IoU : {iou_score:.2f}")
+    axes[3].axis("off")
 
+    plt.tight_layout()
+    output_path = "reports/figures/flood_segmentation_result.png"
+    plt.savefig(output_path, dpi=200, bbox_inches="tight")
+    plt.close()
+
+if __name__ == "__main__":
+    evaluation()
