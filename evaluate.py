@@ -46,4 +46,10 @@ def evaluation():
     axes[1].imshow(image[3],cmap="Blues")
     axes[1].set_title("NDWI")
     axes[1].axis("off")
-    
+
+    #Ground Truth
+    axes[2].imshow(predicted_mask,cmap="Blues")
+    axes[2].set_title("Ground Truth Water")
+    axes[2].axis("off")
+
+
