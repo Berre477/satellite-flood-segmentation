@@ -1,2 +1,4 @@
-# Satellite Flood segementation
-Exploring Sentinel -1 and Sentinel-2 data for surface segemnetation across the UK
+# Mult-Modal satellite flood segmentation for Sentinel -1 and Sentinel -2
+
+This is  a deep learning and Earth Observation pipeline designed for automating surface water mapping and flood monitoring.
+
