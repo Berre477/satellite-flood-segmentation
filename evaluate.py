@@ -34,4 +34,16 @@ def evaluation():
         proba = torch.sigmoid(logits).cpu().numpy()
         predicted_mask = (proba >0.5).astype(np.uint8)
 
+    os.makedirs("reports/figures", exist_ok=True)
+    fig, axes = plt.subplots(1, 4, figsize=(16, 4))
+
+    #SAR VV Radar backsatter
+    axes[0].imshow(image[0],cmap="gray")
+    axes[0].set_title("Sentinel-1 SAR VV")
+    axes[0].axis("off")
+
+    #NDWI
+    axes[1].imshow(image[3],cmap="Blues")
+    axes[1].set_title("NDWI")
+    axes[1].axis("off")
     
